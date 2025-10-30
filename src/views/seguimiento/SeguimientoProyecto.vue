@@ -423,4 +423,11 @@ watch(seguimientoTab, (tab) => {
 
 <style scoped>
 .gap-2 { gap: 0.5rem; }
+
+/* Asegurar que el container use todo el ancho disponible */
+:deep(.v-container) {
+  max-width: none !important;
+  width: 100% !important;
+  padding: 0 16px !important;
+}
 </style>
