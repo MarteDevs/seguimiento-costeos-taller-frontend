@@ -1,0 +1,215 @@
+### BACKEND SEGUIMIENTO Y COSTEO - PRUEBAS DE ENDPOINTS (VALIDADAS)
+
+@base = http://localhost:3000
+
+### =======================================================
+### 1. HEALTH CHECK
+### =======================================================
+GET {{base}}/health
+
+### =======================================================
+### 2. GESTIÓN DE PROYECTO COMPLETO
+### =======================================================
+
+# @name crearProyecto
+### 2.1 PROYECTOS - Crear un nuevo proyecto de prueba
+POST {{base}}/api/proyectos
+Content-Type: application/json
+
+{
+  "fecha": "2024-07-20",
+  "nombre_del_proyecto": "Expansión Mina Jupiter",
+  "mina": "Mina Jupiter",
+  "equipo": "Equipo Gamma",
+  "habilitado_estimado": 150000,
+  "días_trabajados": 90,
+  "números_de_trabajadores_por_dia": 25,
+  "numero_de_tareas_por_dia": 10
+}
+
+@proyectoId = {{crearProyecto.response.body.data.id}}
+
+### 2.2 PROYECTOS - Obtener todos los proyectos
+GET {{base}}/api/proyectos
+
+### 2.3 PROYECTOS - Obtener el proyecto recién creado por ID
+GET {{base}}/api/proyectos/{{proyectoId}}
+
+### =======================================================
+### 3. AÑADIR COSTOS AL PROYECTO (TODAS LAS TABLAS)
+### =======================================================
+
+# @name crearManoObra
+### 3.1 MANO DE OBRA (Costo Fijo)
+POST {{base}}/api/proyectos/{{proyectoId}}/costos/mano-obra
+Content-Type: application/json
+
+{
+  "trabajador": "Jefe de Proyecto",
+  "cantidad_trabajador": 1,
+  "precio": 350.00,
+  "dias_trabajados": 90
+}
+
+@manoObraId = {{crearManoObra.response.body.data.id}}
+
+### 3.2 LOCAL (Costo Fijo)
+POST {{base}}/api/proyectos/{{proyectoId}}/costos/local
+Content-Type: application/json
+
+{
+  "descripcion": "Alquiler de campamento minero",
+  "promedio": 30,
+  "precio_unitario": 10000.00,
+  "dias_trabajados": 90
+}
+
+### 3.3 VIGILANCIA (Costo Fijo)
+POST {{base}}/api/proyectos/{{proyectoId}}/costos/vigilancia
+Content-Type: application/json
+
+{
+  "descripcion": "Servicio de vigilancia perimetral 24/7",
+  "promedio": 30,
+  "precio_unitario": 5000.00,
+  "dias_trabajados": 90
+}
+
+### 3.4 ENERGIA (Costo Fijo)
+POST {{base}}/api/proyectos/{{proyectoId}}/costos/energia
+Content-Type: application/json
+
+{
+  "descripcion": "Suministro eléctrico para campamento y operaciones",
+  "promedio": 1500,
+  "precio_unitario": 0.75,
+  "dias_trabajados": 90
+}
+
+### 3.5 HERRAMIENTAS Y OTROS (Costo Fijo)
+POST {{base}}/api/proyectos/{{proyectoId}}/costos/herramientas-otros
+Content-Type: application/json
+
+{
+  "descripcion": "Amortización de herramientas menores",
+  "promedio": 1,
+  "precio_unitario": 15000.00,
+  "dias_trabajados": 1
+}
+
+### 3.6 MATERIALES (Costo Variable)
+POST {{base}}/api/proyectos/{{proyectoId}}/costos/materiales
+Content-Type: application/json
+
+{
+  "descripcion": "Acero estructural A36",
+  "cantidad": 5000,
+  "unidad": "kg",
+  "precio_unitario": 2.50,
+  "cantidad_usado": 0
+}
+
+### 3.7 IMPLEMENTOS DE SEGURIDAD (Costo Variable)
+POST {{base}}/api/proyectos/{{proyectoId}}/costos/implementos-seguridad
+Content-Type: application/json
+
+{
+  "descripcion": "Uniformes y EPP para 25 trabajadores",
+  "cantidad": 25,
+  "precio_unitario": 300.00,
+  "dias_trabajados": 1
+}
+
+### 3.8 PETROLEO (Costo Variable)
+POST {{base}}/api/proyectos/{{proyectoId}}/costos/petroleo
+Content-Type: application/json
+
+{
+  "descripcion": "Diésel para maquinaria pesada",
+  "cantidad": 10000,
+  "precio_unitario": 15.50,
+  "dias_trabajados": 90
+}
+
+# @name crearGasolina
+### 3.9 GASOLINA (Costo Variable)
+POST {{base}}/api/proyectos/{{proyectoId}}/costos/gasolina
+Content-Type: application/json
+
+{
+  "descripcion": "Gasolina para vehículos ligeros",
+  "cantidad": 2000,
+  "precio_unitario": 20.25,
+  "dias_trabajados": 90
+}
+
+@gasolinaId = {{crearGasolina.response.body.data.id}}
+
+### 3.10 TOPICO (Costo Variable)
+POST {{base}}/api/proyectos/{{proyectoId}}/costos/topico
+Content-Type: application/json
+
+{
+  "descripcion": "Insumos médicos para tópico",
+  "cantidad": 1,
+  "precio_unitario": 2000.00,
+  "dias_trabajados": 90
+}
+
+### 3.11 EQUIPO Y OTRO (Costo Variable)
+POST {{base}}/api/proyectos/{{proyectoId}}/costos/equipo-otro
+Content-Type: application/json
+
+{
+  "descripcion": "Alquiler de excavadora CAT 320D",
+  "cantidad": 1,
+  "precio_unitario": 800.00,
+  "dias_trabajados": 75
+}
+
+### =======================================================
+### 4. RESUMEN Y VERIFICACIÓN
+### =======================================================
+
+### 4.1 PROYECTOS - Actualizar resumen de costos explícitamente (aunque se actualiza tras cada costo)
+POST {{base}}/api/proyectos/{{proyectoId}}/actualizar-resumen
+
+### 4.2 PROYECTOS - Obtener resumen completo del proyecto
+GET {{base}}/api/proyectos/{{proyectoId}}/resumen
+
+### =======================================================
+### 5. ACTUALIZACIONES Y ELIMINACIONES DE PRUEBA
+### =======================================================
+
+### 5.1 MANO DE OBRA - Actualizar el registro creado
+PUT {{base}}/api/proyectos/{{proyectoId}}/costos/mano-obra/{{manoObraId}}
+Content-Type: application/json
+
+{
+  "trabajador": "Jefe de Proyecto (Senior)",
+  "cantidad_trabajador": 1,
+  "precio": 400.00,
+  "dias_trabajados": 90
+}
+
+### 5.2 GASOLINA - Eliminar el registro creado
+DELETE {{base}}/api/proyectos/{{proyectoId}}/costos/gasolina/{{gasolinaId}}
+
+### 5.3 PROYECTOS - Obtener resumen para verificar los cambios
+GET {{base}}/api/proyectos/{{proyectoId}}/resumen
+
+### =======================================================
+### 6. LIMPIEZA
+### =======================================================
+
+### 6.1 PROYECTOS - Eliminar proyecto y todos sus costos asociados
+DELETE {{base}}/api/proyectos/{{proyectoId}}
+
+### 6.2 PROYECTOS - Verificar que el proyecto fue eliminado
+GET {{base}}/api/proyectos/{{proyectoId}}
+
+### NOTAS:
+# - Este script recorre un ciclo completo: crear proyecto, agregar costos (todas las tablas),
+#   actualizar resumen, actualizar/eliminar costos, y limpiar.
+# - Se utilizan variables para encadenar IDs del proyecto y de costos creados.
+# - Todos los bodies cumplen las validaciones definidas en el middleware.
