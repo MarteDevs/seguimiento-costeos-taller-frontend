@@ -7,6 +7,10 @@ const router = useRouter()
 const proyectos = ref([])
 const loading = ref(false)
 const error = ref('')
+const toast = ref({ show: false, message: '', color: 'success' })
+function notify(message, color = 'success') {
+  toast.value = { show: true, message, color }
+}
 
 const form = ref({
   fecha: '',
@@ -38,6 +42,7 @@ async function cargarProyectos() {
     await cargarEstados()
   } catch (e) {
     error.value = e.message
+    notify(e.message, 'error')
   } finally {
     loading.value = false
   }
@@ -61,9 +66,11 @@ async function crearProyecto() {
     const res = await ProyectosService.create(payload)
     await cargarProyectos()
     const id = res?.data?.id
+    notify('Proyecto creado correctamente', 'success')
     if (id) router.push(`/proyectos/${id}`)
   } catch (e) {
     error.value = e.message
+    notify(e.message, 'error')
   }
 }
 
@@ -72,6 +79,7 @@ async function eliminarProyecto(id) {
   try {
     await ProyectosService.delete(id)
     await cargarProyectos()
+    notify('Proyecto eliminado', 'success')
   } catch (e) { error.value = e.message }
 }
 
@@ -188,6 +196,7 @@ function statusColor(id) { return estados.value[id]?.color || 'warning' }
       </v-col>
     </v-row>
   </v-container>
+  <v-snackbar v-model="toast.show" :color="toast.color" timeout="2500" location="top">{{ toast.message }}</v-snackbar>
 </template>
 
 <style scoped>

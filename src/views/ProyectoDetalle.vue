@@ -11,6 +11,10 @@ const proyecto = ref(null)
 const resumen = ref(null)
 const loading = ref(false)
 const error = ref('')
+const toast = ref({ show: false, message: '', color: 'success' })
+function notify(message, color = 'success') {
+  toast.value = { show: true, message, color }
+}
 
 async function cargar() {
   loading.value = true
@@ -26,7 +30,11 @@ async function cargar() {
 }
 
 async function actualizarResumen() {
-  try { await ProyectosService.actualizarResumen(id); await cargar() } catch (e) { error.value = e.message }
+  try {
+    await ProyectosService.actualizarResumen(id)
+    await cargar()
+    notify('Resumen actualizado', 'success')
+  } catch (e) { error.value = e.message; notify(e.message, 'error') }
 }
 
 // Utilidades de UI
@@ -71,6 +79,8 @@ function displayLabelForKey(k) {
 // Diálogos para crear/editar
 const createDialog = ref(false)
 const editDialog = ref(false)
+const updateDialog = ref(false)
+const deleteDialog = ref(false)
 
 function startCreateForKey(k) {
   const cat = resumenKeyToCategoria[k]
@@ -204,11 +214,13 @@ async function enviarCosto() {
     })
     const res = await crearCosto(id, category.value, body)
     if (!createdIds.value[category.value]) createdIds.value[category.value] = []
-    const newId = res?.data?.id
+    const newId = res?.data?.costo?.id ?? res?.data?.id ?? res?.id
     if (newId) createdIds.value[category.value].push(newId)
     await actualizarResumen()
     resetPayload()
-  } catch (e) { error.value = e.message }
+    createDialog.value = false
+    notify(res?.message || 'Costo creado exitosamente', 'success')
+  } catch (e) { error.value = e.message; notify(e.message, 'error') }
 }
 
 const update = ref({ id: '', body: {} })
@@ -226,7 +238,8 @@ async function actualizarCostoSubmit() {
     await actualizarCosto(id, category.value, update.value.id, body)
     await actualizarResumen()
     update.value = { id: '', body: {} }
-  } catch (e) { error.value = e.message }
+    notify('Costo actualizado correctamente', 'success')
+  } catch (e) { error.value = e.message; notify(e.message, 'error') }
 }
 
 const del = ref({ id: '' })
@@ -236,6 +249,7 @@ async function eliminarCostoSubmit() {
     await eliminarCosto(id, category.value, del.value.id)
     await actualizarResumen()
     del.value.id = ''
+    notify('Costo eliminado correctamente', 'success')
   } catch (e) { error.value = e.message }
 }
 
@@ -276,11 +290,17 @@ const categoriesEmpty = computed(() => {
       </v-card-text>
     </v-card>
 
+    <!-- Botones superiores para acciones globales -->
+    <div class="d-flex justify-end mb-3">
+      <v-btn variant="tonal" class="mr-2" @click="updateDialog = true">Actualizar costo</v-btn>
+      <v-btn variant="tonal" color="error" @click="deleteDialog = true">Eliminar costo</v-btn>
+    </div>
+
     <v-row>
-  <v-col cols="12" md="6">
-    <v-card>
-      <v-card-title>Resumen</v-card-title>
-      <v-card-text>
+      <v-col cols="12" md="6">
+        <v-card>
+          <v-card-title>Resumen</v-card-title>
+          <v-card-text>
         <div class="d-flex justify-space-between align-center mb-3">
           <div class="text-medium-emphasis">Última actualización del cálculo</div>
           <v-btn color="primary" @click="actualizarResumen">Actualizar resumen</v-btn>
@@ -350,9 +370,9 @@ const categoriesEmpty = computed(() => {
               </v-list>
             </div>
           </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+      </v-card>
+    </v-col>
+  </v-row>
 
   <!-- Tablas por categoría -->
   <v-row class="mt-4">
@@ -429,36 +449,47 @@ const categoriesEmpty = computed(() => {
     </v-card>
   </v-dialog>
 
-    <v-row class="mt-2">
-      <v-col cols="12" md="6">
-        <v-card>
-          <v-card-title>Actualizar costo</v-card-title>
-          <v-card-text>
-            <v-select label="Categoría" v-model="category" :items="CategoriasCostos" class="mb-2" />
-            <v-form @submit.prevent="actualizarCostoSubmit">
-              <v-text-field label="ID del costo" v-model="update.id" placeholder="ID" />
-              <div v-for="f in fieldsByCategory[category]" :key="f.key" class="mb-2">
-                <v-text-field :label="f.label" :type="f.type" :step="f.step || undefined" v-model="update.body[f.key]" />
-              </div>
-              <v-btn type="submit" color="primary">Actualizar</v-btn>
-            </v-form>
-          </v-card-text>
-        </v-card>
-      </v-col>
+  <!-- Diálogo Actualizar (global) -->
+  <v-dialog v-model="updateDialog" max-width="700" @update:model-value="val => { if (!val) update.value = { id: '', body: {} } }">
+    <v-card>
+      <v-card-title>Actualizar costo</v-card-title>
+      <v-card-text>
+        <v-select label="Categoría" v-model="category" :items="CategoriasCostos" class="mb-2" />
+        <v-form @submit.prevent="async () => { await actualizarCostoSubmit(); updateDialog = false }">
+          <v-text-field label="ID del costo" v-model="update.id" placeholder="ID" />
+          <div v-for="f in fieldsByCategory[category]" :key="f.key" class="mb-2">
+            <v-text-field :label="f.label" :type="f.type" :step="f.step || undefined" v-model="update.body[f.key]" />
+          </div>
+          <div class="d-flex gap-2">
+            <v-btn type="submit" color="primary">Guardar</v-btn>
+            <v-btn variant="tonal" @click="updateDialog = false">Cancelar</v-btn>
+          </div>
+        </v-form>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 
-      <v-col cols="12" md="6">
-        <v-card>
-          <v-card-title>Eliminar costo</v-card-title>
-          <v-card-text>
-            <v-select label="Categoría" v-model="category" :items="CategoriasCostos" class="mb-2" />
-            <v-form @submit.prevent="eliminarCostoSubmit">
-              <v-text-field label="ID del costo" v-model="del.id" placeholder="ID" />
-              <v-btn type="submit" color="error" variant="tonal">Eliminar</v-btn>
-            </v-form>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+  <!-- Diálogo Eliminar (global) -->
+  <v-dialog v-model="deleteDialog" max-width="600" @update:model-value="val => { if (!val) del.value.id = '' }">
+    <v-card>
+      <v-card-title>Eliminar costo</v-card-title>
+      <v-card-text>
+        <v-select label="Categoría" v-model="category" :items="CategoriasCostos" class="mb-2" />
+        <v-form @submit.prevent="async () => { await eliminarCostoSubmit(); deleteDialog = false }">
+          <v-text-field label="ID del costo" v-model="del.id" placeholder="ID" />
+          <div class="d-flex gap-2">
+            <v-btn type="submit" color="error" variant="tonal">Eliminar</v-btn>
+            <v-btn variant="tonal" @click="deleteDialog = false">Cancelar</v-btn>
+          </div>
+        </v-form>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
+
+  <!-- Snackbar de confirmación -->
+  <v-snackbar v-model="toast.show" :color="toast.color" timeout="2500" location="top">{{ toast.message }}</v-snackbar>
+
+    <!-- Tarjetas inferiores de actualizar/eliminar removidas en favor de modales superiores -->
   </v-container>
 </template>
 
