@@ -15,8 +15,25 @@ async function request(method, path, body) {
     json = null;
   }
   if (!resp.ok) {
-    const msg = (json && (json.message || json.error)) || `HTTP ${resp.status}`;
-    throw new Error(msg);
+    let message;
+    if (json) {
+      if (typeof json.message === 'string') {
+        message = json.message;
+      } else if (json.error) {
+        if (typeof json.error === 'string') {
+          message = json.error;
+        } else if (typeof json.error.message === 'string') {
+          message = json.error.message;
+        } else {
+          try { message = JSON.stringify(json.error); } catch { message = '[error]'; }
+        }
+      }
+    }
+    if (!message) message = `HTTP ${resp.status}`;
+    const err = new Error(message);
+    err.status = resp.status;
+    err.payload = json;
+    throw err;
   }
   return json ?? { ok: true };
 }
