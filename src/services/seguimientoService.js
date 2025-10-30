@@ -26,7 +26,8 @@ export const SeguimientoService = {
     },
   },
   avance: (proyectoId) => http.get(`/api/proyectos/${proyectoId}/seguimiento/avance`),
-  manifiestoUrl: (proyectoId) => `${BASE_URL}/api/proyectos/${proyectoId}/seguimiento/manifiesto.pdf`,
+  //manifiestoUrl: (proyectoId) => `${BASE_URL}/api/proyectos/${proyectoId}/seguimiento/manifiesto.pdf`,
+  manifiestoUrl: (proyectoId) => `${BASE_URL}/api/proyectos/${proyectoId}/seguimiento/manifiesto.xlsx`,
 }
 
 export default SeguimientoService
